@@ -112,25 +112,32 @@ class Trainer(object):
 
     def train(self):
         self.agent.start_interaction(self.envs, nlump=self.hps['nlumps'], dynamics=self.dynamics)
-        count = 0
         while True:
             info = self.agent.step()
             if info['update']:
                 logger.logkvs(info['update'])
                 logger.dumpkvs()
-            if count == 0:
+            if self.agent.rollout.stats['tcount'] == 0:
                 fname = os.path.join(self.hps['save_dir'], 'checkpoints')
-                try:
+                if os.path.exists(fname+'.index'):
                     load_state(fname)
                     print('load successfully')
-                except Exception as e:
+                else:
                     print('fail to load')
             if self.agent.rollout.stats['tcount']%int(self.num_timesteps/self.num_timesteps)==0:
                 fname = os.path.join(self.hps['save_dir'], 'checkpoints')
                 save_state(fname)
             if self.agent.rollout.stats['tcount'] > self.num_timesteps:
                 break
-            count = 1
+            if (self.agent.rollout.stats['tcount'] % args.vis_curves_interval == 0):
+                self.summary = tf.Summary()
+                if not info['update']['recent_best_ext_ret'] is None:
+                    self.summary.value.add(
+                                tag = 'recent_best_ext_ret',
+                                simple_value = info['update']['recent_best_ext_ret'],
+                            )
+                    summary_writer.add_summary(self.summary, self.agent.rollout.stats['tcount'])
+                    summary_writer.flush()
 
         self.agent.stop_interaction()
 
@@ -158,7 +165,9 @@ def make_env_all_params(rank, add_monitor, args):
             env = make_robo_hockey()
 
     if add_monitor:
-        env = Monitor(env, osp.join(args['save_dir'], '%.2i' % rank))
+        if not os.path.exists(args['save_dir']+'csv_file/'):
+            os.makedirs(args['save_dir']+'csv_file/')
+        env = Monitor(env, osp.join(args['save_dir'], 'csv_file/%.2i' % rank))
     return env
 
 
@@ -222,9 +231,12 @@ if __name__ == '__main__':
     parser.add_argument('--layernorm', type=int, default=0)
     parser.add_argument('--feat_learning', type=str, default="none",
                         choices=["none", "idf", "vaesph", "vaenonsph", "pix2pix"])
+    parser.add_argument('--vis_curves_interval', type=int, default=1)
 
     args = parser.parse_args()
     args.save_dir = '../result/'
     args.save_dir = os.path.join(args.save_dir, 'e_n-{}/'.format(args.env))
+
+    summary_writer = tf.summary.FileWriter(args.save_dir)
 
     start_experiment(**args.__dict__)
