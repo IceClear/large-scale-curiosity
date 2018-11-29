@@ -25,7 +25,7 @@ from wrappers import MontezumaInfoWrapper, make_mario_env, make_robo_pong, make_
 
 
 def start_experiment(**args):
-    make_env = partial(make_env_all_params, add_monitor=False, args=args)
+    make_env = partial(make_env_all_params, add_monitor=True, args=args)
 
     trainer = Trainer(make_env=make_env,
                       num_timesteps=args['num_timesteps'], hps=args,
@@ -158,7 +158,7 @@ def make_env_all_params(rank, add_monitor, args):
             env = make_robo_hockey()
 
     if add_monitor:
-        env = Monitor(env, osp.join(logger.get_dir(), '%.2i' % rank))
+        env = Monitor(env, osp.join(args['save_dir'], '%.2i' % rank))
     return env
 
 
