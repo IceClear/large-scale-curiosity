@@ -101,6 +101,7 @@ def random_agent_ob_mean_std(env, nsteps=10000):
         std = np.empty(shape=(), dtype=np.float32)
     MPI.COMM_WORLD.Bcast(mean, root=0)
     MPI.COMM_WORLD.Bcast(std, root=0)
+
     return mean, std
 
 
@@ -225,3 +226,16 @@ def tile_images(array, n_cols=None, max_images=None, div=1):
 
     return np.concatenate([row(i) for i in range(n_rows)], axis=0)
 
+def get_session():
+    """Returns recently made Tensorflow session"""
+    return tf.get_default_session()
+
+def load_state(fname):
+    saver = tf.train.Saver()
+    saver.restore(get_session(), fname)
+
+
+def save_state(fname):
+    os.makedirs(os.path.dirname(fname), exist_ok=True)
+    saver = tf.train.Saver()
+    saver.save(get_session(), fname)

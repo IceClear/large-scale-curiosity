@@ -4,6 +4,7 @@ try:
 except:
     print("no OpenGL.GLU")
 import functools
+import os
 import os.path as osp
 from functools import partial
 
@@ -18,20 +19,24 @@ from auxiliary_tasks import FeatureExtractor, InverseDynamics, VAE, JustPixels
 from cnn_policy import CnnPolicy
 from cppo_agent import PpoOptimizer
 from dynamics import Dynamics, UNet
-from utils import random_agent_ob_mean_std
+from utils import random_agent_ob_mean_std, load_state, save_state
 from wrappers import MontezumaInfoWrapper, make_mario_env, make_robo_pong, make_robo_hockey, \
     make_multi_pong, AddRandomStateToInfo, MaxAndSkipEnv, ProcessFrame84, ExtraTimeLimit
 
 
 def start_experiment(**args):
-    make_env = partial(make_env_all_params, add_monitor=True, args=args)
+    make_env = partial(make_env_all_params, add_monitor=False, args=args)
 
     trainer = Trainer(make_env=make_env,
                       num_timesteps=args['num_timesteps'], hps=args,
                       envs_per_process=args['envs_per_process'])
     log, tf_sess = get_experiment_environment(**args)
     with log, tf_sess:
-        logdir = logger.get_dir()
+        logdir = args['save_dir']
+        try:
+            os.makedirs(logdir)
+        except Exception as e:
+            pass
         print("results will be saved to ", logdir)
         trainer.train()
 
@@ -107,13 +112,25 @@ class Trainer(object):
 
     def train(self):
         self.agent.start_interaction(self.envs, nlump=self.hps['nlumps'], dynamics=self.dynamics)
+        count = 0
         while True:
             info = self.agent.step()
             if info['update']:
                 logger.logkvs(info['update'])
                 logger.dumpkvs()
+            if count == 0:
+                fname = os.path.join(self.hps['save_dir'], 'checkpoints')
+                try:
+                    load_state(fname)
+                    print('load successfully')
+                except Exception as e:
+                    print('fail to load')
+            if self.agent.rollout.stats['tcount']%int(self.num_timesteps/self.num_timesteps)==0:
+                fname = os.path.join(self.hps['save_dir'], 'checkpoints')
+                save_state(fname)
             if self.agent.rollout.stats['tcount'] > self.num_timesteps:
                 break
+            count = 1
 
         self.agent.stop_interaction()
 
@@ -154,7 +171,7 @@ def get_experiment_environment(**args):
     set_global_seeds(process_seed)
     setup_mpi_gpus()
 
-    logger_context = logger.scoped_configure(dir=None,
+    logger_context = logger.scoped_configure(dir=args['save_dir'],
                                              format_strs=['stdout', 'log',
                                                           'csv'] if MPI.COMM_WORLD.Get_rank() == 0 else ['log'])
     tf_context = setup_tensorflow_session()
@@ -162,7 +179,7 @@ def get_experiment_environment(**args):
 
 
 def add_environments_params(parser):
-    parser.add_argument('--env', help='environment ID', default='BreakoutNoFrameskip-v4',
+    parser.add_argument('--env', help='environment ID', default='PongNoFrameskip-v4',
                         type=str)
     parser.add_argument('--max-episode-steps', help='maximum number of timesteps for episode', default=4500, type=int)
     parser.add_argument('--env_kind', type=str, default="atari")
@@ -207,5 +224,7 @@ if __name__ == '__main__':
                         choices=["none", "idf", "vaesph", "vaenonsph", "pix2pix"])
 
     args = parser.parse_args()
+    args.save_dir = '../result/'
+    args.save_dir = os.path.join(args.save_dir, 'e_n-{}/'.format(args.env))
 
     start_experiment(**args.__dict__)
