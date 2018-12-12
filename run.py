@@ -136,6 +136,10 @@ class Trainer(object):
                                 tag = 'recent_best_ext_ret',
                                 simple_value = info['update']['recent_best_ext_ret'],
                             )
+                    self.summary.value.add(
+                                tag = 'recent_mean_ext_ret',
+                                simple_value = info['update']['eprew_recent'],
+                            )
                     summary_writer.add_summary(self.summary, self.agent.rollout.stats['tcount'])
                     summary_writer.flush()
 
@@ -234,7 +238,7 @@ if __name__ == '__main__':
     parser.add_argument('--vis_curves_interval', type=int, default=1)
 
     args = parser.parse_args()
-    args.save_dir = '../result/'
+    args.save_dir = '../results/'
     args.save_dir = os.path.join(args.save_dir, 'e_n-{}/'.format(args.env))
 
     summary_writer = tf.summary.FileWriter(args.save_dir)

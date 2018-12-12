@@ -136,7 +136,7 @@ class Rollout(object):
             self.statlists['eplen'].extend(all_ep_infos['l'])
             self.stats['epcount'] += len(all_ep_infos['l'])
             self.stats['tcount'] += sum(all_ep_infos['l'])
-            self.statlists['current_eprew'] = all_ep_infos['r']
+            # self.statlists['current_eprew'] = all_ep_infos['r']
             if 'visited_rooms' in keys_:
                 # Montezuma specific logging.
                 self.stats['visited_rooms'] = sorted(list(set.union(*all_ep_infos['visited_rooms'])))
