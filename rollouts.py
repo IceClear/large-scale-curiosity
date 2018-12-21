@@ -52,6 +52,8 @@ class Rollout(object):
         self.ep_count = 0
         self.single_rew_sum = 0
         self.max_rew_sum = 0
+        self.single_eprew = None
+        self.single_eprew_all = None
 
     def collect_rollout(self):
         self.ep_infos_new = []
@@ -145,10 +147,10 @@ class Rollout(object):
             self.statlists['eplen'].extend(all_ep_infos['l'])
             self.stats['epcount'] += len(all_ep_infos['l'])
             self.stats['tcount'] += sum(all_ep_infos['l'])
-            self.statlists['single_eprew'] = all_ep_infos['r'][0]
+            self.single_eprew = all_ep_infos['r'][0]
 
-            self.single_rew_sum += self.statlists['single_eprew']
-            self.statlists['single_eprew_all'] =  self.single_rew_sum/self.ep_count
+            self.single_rew_sum += self.single_eprew
+            self.single_eprew_all = self.single_rew_sum/self.ep_count
 
             if 'visited_rooms' in keys_:
                 # Montezuma specific logging.
@@ -181,7 +183,7 @@ class Rollout(object):
             if (self.best_ext_ret is None) or (current_max > self.best_ext_ret):
                 self.best_ext_ret = current_max
             self.max_rew_sum += self.best_ext_ret
-            self.statlists['best_ext_ret_all'] = self.max_rew_sum/self.ep_count
+            self.best_ext_ret_all = self.max_rew_sum/self.ep_count
 
         self.current_max = current_max
 

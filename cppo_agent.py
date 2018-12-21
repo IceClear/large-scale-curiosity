@@ -151,10 +151,13 @@ class PpoOptimizer(object):
             vpredstd=self.rollout.buf_vpreds.std(),
             ev=explained_variance(self.rollout.buf_vpreds.ravel(), self.buf_rets.ravel()),
             rew_mean=np.mean(self.rollout.buf_rews),
-            recent_best_ext_ret=self.rollout.current_max
+            recent_best_ext_ret=self.rollout.current_max,
+            single_eprew = self.rollout.single_eprew,
+            single_eprew_all = self.rollout.single_eprew_all,
         )
         if self.rollout.best_ext_ret is not None:
             info['best_ext_ret'] = self.rollout.best_ext_ret
+            info['best_ext_ret_all'] = self.rollout.best_ext_ret_all
 
         # normalize advantages
         if self.normadv:
