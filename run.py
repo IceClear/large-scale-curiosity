@@ -23,6 +23,8 @@ from utils import random_agent_ob_mean_std, load_state, save_state
 from wrappers import MontezumaInfoWrapper, make_mario_env, make_robo_pong, make_robo_hockey, \
     make_multi_pong, AddRandomStateToInfo, MaxAndSkipEnv, ProcessFrame84, ExtraTimeLimit
 
+import subprocess
+
 
 def start_experiment(**args):
     make_env = partial(make_env_all_params, add_monitor=True, args=args)
@@ -132,17 +134,29 @@ class Trainer(object):
             if (self.agent.rollout.stats['tcount'] % args.vis_curves_interval == 0):
                 self.summary = tf.Summary()
                 if not info['update']['recent_best_ext_ret'] is None:
+                    # self.summary.value.add(
+                    #             tag = 'recent_best_ext_ret',
+                    #             simple_value = info['update']['recent_best_ext_ret'],
+                    #         )
+                    # self.summary.value.add(
+                    #             tag = 'recent_mean_ext_ret',
+                    #             simple_value = info['update']['eprew_recent'],
+                    #         )
                     self.summary.value.add(
-                                tag = 'recent_best_ext_ret',
-                                simple_value = info['update']['recent_best_ext_ret'],
-                            )
-                    self.summary.value.add(
-                                tag = 'recent_mean_ext_ret',
-                                simple_value = info['update']['eprew_recent'],
-                            )
-                    self.summary.value.add(
-                                tag = 'best_ext_ret',
+                                tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped',
                                 simple_value = info['update']['best_ext_ret'],
+                            )
+                    self.summary.value.add(
+                                tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped_all',
+                                simple_value = info['update']['best_ext_ret_all'],
+                            )
+                    self.summary.value.add(
+                                tag = 'hierarchy_0/extrinsic_reward_unclipped_max',
+                                simple_value = info['update']['single_eprew'],
+                            )
+                    self.summary.value.add(
+                                tag = 'hierarchy_0/extrinsic_reward_unclipped_max_all',
+                                simple_value = info['update']['single_eprew_all'],
                             )
                     summary_writer.add_summary(self.summary, self.agent.rollout.stats['tcount'])
                     summary_writer.flush()
@@ -241,9 +255,16 @@ if __name__ == '__main__':
                         choices=["none", "idf", "vaesph", "vaenonsph", "pix2pix"])
     parser.add_argument('--vis_curves_interval', type=int, default=1)
 
+    parser.add_argument('--clear-run', action='store_true', default=False,
+                        help='if clear the save folder')
+
     args = parser.parse_args()
     args.save_dir = '../results/'
     args.save_dir = os.path.join(args.save_dir, 'e_n-{}/'.format(args.env))
+    if args.clear_run:
+        '''if clear_run, clear the path before create the path'''
+        input('You have set clear_run, is that what you want?')
+        subprocess.call(["rm", "-r", args.save_dir])
 
     summary_writer = tf.summary.FileWriter(args.save_dir)
 

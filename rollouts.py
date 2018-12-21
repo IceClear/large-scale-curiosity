@@ -49,6 +49,10 @@ class Rollout(object):
 
         self.step_count = 0
 
+        self.ep_count = 0
+        self.single_rew_sum = 0
+        self.max_rew_sum = 0
+
     def collect_rollout(self):
         self.ep_infos_new = []
         for t in range(self.nsteps):
@@ -134,12 +138,18 @@ class Rollout(object):
             # print(all_ep_infos)
             # print(all_ep_infos['r'])
             # print(s)
+            self.ep_count +=1
+
             self.statlists['eprew'].extend(all_ep_infos['r'])
             self.stats['eprew_recent'] = np.mean(all_ep_infos['r'])
             self.statlists['eplen'].extend(all_ep_infos['l'])
             self.stats['epcount'] += len(all_ep_infos['l'])
             self.stats['tcount'] += sum(all_ep_infos['l'])
-            # self.statlists['current_eprew'] = all_ep_infos['r']
+            self.statlists['single_eprew'] = all_ep_infos['r'][0]
+
+            self.single_rew_sum += self.statlists['single_eprew']
+            self.statlists['single_eprew_all'] =  self.single_rew_sum/self.ep_count
+
             if 'visited_rooms' in keys_:
                 # Montezuma specific logging.
                 self.stats['visited_rooms'] = sorted(list(set.union(*all_ep_infos['visited_rooms'])))
@@ -170,6 +180,9 @@ class Rollout(object):
         if current_max is not None:
             if (self.best_ext_ret is None) or (current_max > self.best_ext_ret):
                 self.best_ext_ret = current_max
+            self.max_rew_sum += self.best_ext_ret
+            self.statlists['best_ext_ret_all'] = self.max_rew_sum/self.ep_count
+
         self.current_max = current_max
 
     def env_step(self, l, acs):
