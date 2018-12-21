@@ -144,20 +144,21 @@ class Trainer(object):
                     #         )
                     self.summary.value.add(
                                 tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped',
-                                simple_value = info['update']['best_ext_ret'],
-                            )
-                    self.summary.value.add(
-                                tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped_all',
-                                simple_value = info['update']['best_ext_ret_all'],
-                            )
-                    self.summary.value.add(
-                                tag = 'hierarchy_0/extrinsic_reward_unclipped_max',
                                 simple_value = info['update']['single_eprew'],
                             )
                     self.summary.value.add(
-                                tag = 'hierarchy_0/extrinsic_reward_unclipped_max_all',
+                                tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped_all',
                                 simple_value = info['update']['single_eprew_all'],
                             )
+                    self.summary.value.add(
+                                tag = 'hierarchy_0/extrinsic_reward_unclipped_max',
+                                simple_value = info['update']['best_ext_ret'],
+                            )
+                    self.summary.value.add(
+                                tag = 'hierarchy_0/extrinsic_reward_unclipped_max_all',
+                                simple_value = info['update']['best_ext_ret_all'],
+                            )
+                    
                     summary_writer.add_summary(self.summary, self.agent.rollout.stats['tcount'])
                     summary_writer.flush()
 
