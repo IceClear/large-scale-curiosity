@@ -131,6 +131,9 @@ class Rollout(object):
             keys_ = all_ep_infos[0].keys()
             all_ep_infos = {k: [i[k] for i in all_ep_infos] for k in keys_}
 
+            # print(all_ep_infos)
+            # print(all_ep_infos['r'])
+            # print(s)
             self.statlists['eprew'].extend(all_ep_infos['r'])
             self.stats['eprew_recent'] = np.mean(all_ep_infos['r'])
             self.statlists['eplen'].extend(all_ep_infos['l'])
