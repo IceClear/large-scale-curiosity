@@ -242,7 +242,7 @@ if __name__ == '__main__':
     parser.add_argument('--vis_curves_interval', type=int, default=1)
 
     args = parser.parse_args()
-    args.save_dir = '../results_/'
+    args.save_dir = '../results/'
     args.save_dir = os.path.join(args.save_dir, 'e_n-{}/'.format(args.env))
 
     summary_writer = tf.summary.FileWriter(args.save_dir)
