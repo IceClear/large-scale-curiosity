@@ -131,6 +131,7 @@ class Trainer(object):
                 save_state(fname)
             if self.agent.rollout.stats['tcount'] > self.num_timesteps:
                 break
+            print(self.agent.rollout.stats['tcount'])
             if (self.agent.rollout.stats['tcount'] % args.vis_curves_interval == 0):
                 self.summary = tf.Summary()
                 if not info['update']['recent_best_ext_ret'] is None:
@@ -158,7 +159,7 @@ class Trainer(object):
                                 tag = 'hierarchy_0/extrinsic_reward_unclipped_max_all',
                                 simple_value = info['update']['best_ext_ret_all'],
                             )
-                    
+
                     summary_writer.add_summary(self.summary, self.agent.rollout.stats['tcount'])
                     summary_writer.flush()
 
@@ -233,7 +234,7 @@ def add_optimization_params(parser):
 def add_rollout_params(parser):
     parser.add_argument('--nsteps_per_seg', type=int, default=128)
     parser.add_argument('--nsegs_per_env', type=int, default=1)
-    parser.add_argument('--envs_per_process', type=int, default=128)
+    parser.add_argument('--envs_per_process', type=int, default=32)
     parser.add_argument('--nlumps', type=int, default=1)
 
 
@@ -254,7 +255,7 @@ if __name__ == '__main__':
     parser.add_argument('--layernorm', type=int, default=0)
     parser.add_argument('--feat_learning', type=str, default="none",
                         choices=["none", "idf", "vaesph", "vaenonsph", "pix2pix"])
-    parser.add_argument('--vis_curves_interval', type=int, default=1)
+    parser.add_argument('--vis_curves_interval', type=int, default=4096)
 
     parser.add_argument('--clear-run', action='store_true', default=False,
                         help='if clear the save folder')
