@@ -56,6 +56,7 @@ class Rollout(object):
         self.max_rew_sum = 0
         self.single_eprew = None
         self.single_eprew_all = None
+        self.cur_ep_rew = 0
         self.max_rew = None
         self.summary_writer = tf.summary.FileWriter(self.hps['save_dir'])
         self.summary = tf.Summary()
@@ -79,12 +80,15 @@ class Rollout(object):
         s = t % self.nsteps_per_seg
         for l in range(self.nlumps):
             obs, prevrews, news, infos = self.env_get(l)
+            if prevrews is not None:
+                self.cur_ep_rew += prevrews[0]
             if news[0] and prevrews is not None:
-                self.single_eprew = prevrews[0]
+                self.single_eprew = self.cur_ep_rew
                 if self.max_rew is None:
                     self.max_rew = self.single_eprew
                 elif self.max_rew < self.single_eprew:
                     self.max_rew = self.single_eprew
+                self.cur_ep_rew = 0
 
             if self.step_count % self.hps['vis_curves_interval']==0 and self.single_eprew is not None:
                 self.ep_count +=1
