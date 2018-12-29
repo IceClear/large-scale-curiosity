@@ -4,11 +4,12 @@ import numpy as np
 from mpi4py import MPI
 
 from recorder import Recorder
+import tensorflow as tf
 
 
 class Rollout(object):
     def __init__(self, ob_space, ac_space, nenvs, nsteps_per_seg, nsegs_per_env, nlumps, envs, policy,
-                 int_rew_coeff, ext_rew_coeff, record_rollouts, dynamics):
+                 int_rew_coeff, ext_rew_coeff, record_rollouts, dynamics, hps):
         self.nenvs = nenvs
         self.nsteps_per_seg = nsteps_per_seg
         self.nsegs_per_env = nsegs_per_env
@@ -20,6 +21,7 @@ class Rollout(object):
         self.envs = envs
         self.policy = policy
         self.dynamics = dynamics
+        self.hps = hps
 
         self.reward_fun = lambda ext_rew, int_rew: ext_rew_coeff * np.clip(ext_rew, -1., 1.) + int_rew_coeff * int_rew
 
@@ -54,6 +56,10 @@ class Rollout(object):
         self.max_rew_sum = 0
         self.single_eprew = None
         self.single_eprew_all = None
+        self.max_rew = None
+        self.summary_writer = tf.summary.FileWriter(self.hps['save_dir'])
+        self.summary = tf.Summary()
+
 
     def collect_rollout(self):
         self.ep_infos_new = []
@@ -73,6 +79,39 @@ class Rollout(object):
         s = t % self.nsteps_per_seg
         for l in range(self.nlumps):
             obs, prevrews, news, infos = self.env_get(l)
+            if news[0] and prevrews is not None:
+                self.single_eprew = prevrews[0]
+                if self.max_rew is None:
+                    self.max_rew = self.single_eprew
+                elif self.max_rew < self.single_eprew:
+                    self.max_rew = self.single_eprew
+
+            if self.step_count % self.hps['vis_curves_interval']==0 and self.single_eprew is not None:
+                self.ep_count +=1
+                self.single_rew_sum += self.single_eprew
+                self.single_eprew_all = self.single_rew_sum/self.ep_count
+                self.max_rew_sum += self.max_rew
+                self.best_ext_ret_all = self.max_rew_sum/self.ep_count
+
+                self.summary.value.add(
+                            tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped',
+                            simple_value = self.single_eprew,
+                        )
+                self.summary.value.add(
+                            tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped_all',
+                            simple_value = self.single_eprew_all,
+                        )
+                self.summary.value.add(
+                            tag = 'hierarchy_0/extrinsic_reward_unclipped_max',
+                            simple_value = self.max_rew,
+                        )
+                self.summary.value.add(
+                            tag = 'hierarchy_0/extrinsic_reward_unclipped_max_all',
+                            simple_value = self.best_ext_ret_all,
+                        )
+
+                self.summary_writer.add_summary(self.summary, self.step_count)
+                self.summary_writer.flush()
             # if t > 0:
             #     prev_feat = self.prev_feat[l]
             #     prev_acs = self.prev_acs[l]
@@ -140,17 +179,12 @@ class Rollout(object):
             # print(all_ep_infos)
             # print(all_ep_infos['r'])
             # print(s)
-            self.ep_count +=1
 
             self.statlists['eprew'].extend(all_ep_infos['r'])
             self.stats['eprew_recent'] = np.mean(all_ep_infos['r'])
             self.statlists['eplen'].extend(all_ep_infos['l'])
             self.stats['epcount'] += len(all_ep_infos['l'])
             self.stats['tcount'] += sum(all_ep_infos['l'])
-            self.single_eprew = all_ep_infos['r'][0]
-
-            self.single_rew_sum += self.single_eprew
-            self.single_eprew_all = self.single_rew_sum/self.ep_count
 
             if 'visited_rooms' in keys_:
                 # Montezuma specific logging.
@@ -182,8 +216,6 @@ class Rollout(object):
         if current_max is not None:
             if (self.best_ext_ret is None) or (current_max > self.best_ext_ret):
                 self.best_ext_ret = current_max
-            self.max_rew_sum += self.best_ext_ret
-            self.best_ext_ret_all = self.max_rew_sum/self.ep_count
 
         self.current_max = current_max
 

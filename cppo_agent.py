@@ -22,8 +22,9 @@ class PpoOptimizer(object):
                  ent_coef, gamma, lam, nepochs, lr, cliprange,
                  nminibatches,
                  normrew, normadv, use_news, ext_coeff, int_coeff,
-                 nsteps_per_seg, nsegs_per_env, dynamics):
+                 nsteps_per_seg, nsegs_per_env, dynamics, hps):
         self.dynamics = dynamics
+        self.hps = hps
         with tf.variable_scope(scope):
             self.use_recorder = True
             self.n_updates = 0
@@ -102,7 +103,8 @@ class PpoOptimizer(object):
                                int_rew_coeff=self.int_coeff,
                                ext_rew_coeff=self.ext_coeff,
                                record_rollouts=self.use_recorder,
-                               dynamics=dynamics)
+                               dynamics=dynamics,
+                               hps = self.hps)
 
         self.buf_advs = np.zeros((nenvs, self.rollout.nsteps), np.float32)
         self.buf_rets = np.zeros((nenvs, self.rollout.nsteps), np.float32)
@@ -157,7 +159,6 @@ class PpoOptimizer(object):
         )
         if self.rollout.best_ext_ret is not None:
             info['best_ext_ret'] = self.rollout.best_ext_ret
-            info['best_ext_ret_all'] = self.rollout.best_ext_ret_all
 
         # normalize advantages
         if self.normadv:

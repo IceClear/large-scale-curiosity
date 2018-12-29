@@ -96,7 +96,8 @@ class Trainer(object):
             normadv=hps['norm_adv'],
             ext_coeff=hps['ext_coeff'],
             int_coeff=hps['int_coeff'],
-            dynamics=self.dynamics
+            dynamics=self.dynamics,
+            hps = hps
         )
 
         self.agent.to_report['aux'] = tf.reduce_mean(self.feature_extractor.loss)
@@ -131,37 +132,7 @@ class Trainer(object):
                 save_state(fname)
             if self.agent.rollout.stats['tcount'] > self.num_timesteps:
                 break
-            print(self.agent.rollout.stats['tcount'])
-            if (self.agent.rollout.stats['tcount'] % args.vis_curves_interval == 0):
-                self.summary = tf.Summary()
-                if not info['update']['recent_best_ext_ret'] is None:
-                    # self.summary.value.add(
-                    #             tag = 'recent_best_ext_ret',
-                    #             simple_value = info['update']['recent_best_ext_ret'],
-                    #         )
-                    # self.summary.value.add(
-                    #             tag = 'recent_mean_ext_ret',
-                    #             simple_value = info['update']['eprew_recent'],
-                    #         )
-                    self.summary.value.add(
-                                tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped',
-                                simple_value = info['update']['single_eprew'],
-                            )
-                    self.summary.value.add(
-                                tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped_all',
-                                simple_value = info['update']['single_eprew_all'],
-                            )
-                    self.summary.value.add(
-                                tag = 'hierarchy_0/extrinsic_reward_unclipped_max',
-                                simple_value = info['update']['best_ext_ret'],
-                            )
-                    self.summary.value.add(
-                                tag = 'hierarchy_0/extrinsic_reward_unclipped_max_all',
-                                simple_value = info['update']['best_ext_ret_all'],
-                            )
-
-                    summary_writer.add_summary(self.summary, self.agent.rollout.stats['tcount'])
-                    summary_writer.flush()
+            # print(self.agent.rollout.stats['tcount'])
 
         self.agent.stop_interaction()
 
@@ -267,7 +238,5 @@ if __name__ == '__main__':
         '''if clear_run, clear the path before create the path'''
         input('You have set clear_run, is that what you want?')
         subprocess.call(["rm", "-r", args.save_dir])
-
-    summary_writer = tf.summary.FileWriter(args.save_dir)
 
     start_experiment(**args.__dict__)
