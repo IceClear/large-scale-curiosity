@@ -130,7 +130,6 @@ class Trainer(object):
                     print('load successfully')
                 else:
                     print('fail to load')
-            print('tcount',self.agent.rollout.stats['tcount'])
             if self.agent.rollout.stats['tcount']%int(self.num_timesteps/self.num_timesteps)==0:
                 fname = os.path.join(self.hps['save_dir'], 'checkpoints')
                 save_state(fname)
