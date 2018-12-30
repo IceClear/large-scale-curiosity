@@ -229,7 +229,7 @@ if __name__ == '__main__':
     parser.add_argument('--layernorm', type=int, default=0)
     parser.add_argument('--feat_learning', type=str, default="none",
                         choices=["none", "idf", "vaesph", "vaenonsph", "pix2pix"])
-    parser.add_argument('--vis_curves_interval', type=int, default=256)
+    parser.add_argument('--vis_curves_interval', type=int, default=4096)
 
     parser.add_argument('--clear-run', action='store_true', default=False,
                         help='if clear the save folder')
