@@ -57,12 +57,12 @@ class Rollout(object):
         self.max_rew_sum = 0
         self.single_eprew = None
         self.single_eprew_all = None
-        self.cur_ep_rew = 0
         self.max_rew = None
         self.summary_writer = summary_writer
 
     def collect_rollout(self):
         self.ep_infos_new = []
+        self.add_index = 0
         for t in range(self.nsteps):
             self.rollout_step()
         self.calculate_reward()
@@ -79,45 +79,6 @@ class Rollout(object):
         s = t % self.nsteps_per_seg
         for l in range(self.nlumps):
             obs, prevrews, news, infos = self.env_get(l)
-            if len(self.ep_infos_new)>0:
-                self.step_value += self.ep_infos_new[0][0]
-            if prevrews is not None:
-                self.cur_ep_rew += prevrews[0]
-            if news[0] and prevrews is not None:
-                self.single_eprew = self.cur_ep_rew
-                if self.max_rew is None:
-                    self.max_rew = self.single_eprew
-                elif self.max_rew < self.single_eprew:
-                    self.max_rew = self.single_eprew
-                self.cur_ep_rew = 0
-
-            if self.step_value > self.hps['vis_curves_interval']*self.ep_count and self.single_eprew is not None:
-                summary = tf.Summary()
-                self.ep_count +=1
-                self.single_rew_sum += self.single_eprew
-                self.single_eprew_all = self.single_rew_sum/self.ep_count
-                self.max_rew_sum += self.max_rew
-                self.best_ext_ret_all = self.max_rew_sum/self.ep_count
-
-                summary.value.add(
-                            tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped',
-                            simple_value = self.single_eprew,
-                        )
-                summary.value.add(
-                            tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped_all',
-                            simple_value = self.single_eprew_all,
-                        )
-                summary.value.add(
-                            tag = 'hierarchy_0/extrinsic_reward_unclipped_max',
-                            simple_value = self.max_rew,
-                        )
-                summary.value.add(
-                            tag = 'hierarchy_0/extrinsic_reward_unclipped_max_all',
-                            simple_value = self.best_ext_ret_all,
-                        )
-
-                self.summary_writer.add_summary(summary, self.step_value)
-                self.summary_writer.flush()
             # if t > 0:
             #     prev_feat = self.prev_feat[l]
             #     prev_acs = self.prev_acs[l]
@@ -185,6 +146,45 @@ class Rollout(object):
             # print(all_ep_infos)
             # print(all_ep_infos['r'])
             # print(s)
+
+            if len(all_ep_infos['l'])>0:
+                while self.add_index<len(all_ep_infos['l']):
+                    self.step_value += all_ep_infos['l'][self.add_index]
+                    self.add_index += 1
+                    self.single_eprew = all_ep_infos['r'][0]
+                    if self.max_rew is None:
+                        self.max_rew = self.single_eprew
+                    elif self.max_rew < self.single_eprew:
+                        self.max_rew = self.single_eprew
+
+                    if self.step_value > self.hps['vis_curves_interval']*self.ep_count and self.single_eprew is not None:
+                        summary = tf.Summary()
+                        self.ep_count +=1
+                        self.single_rew_sum += self.single_eprew
+                        self.single_eprew_all = self.single_rew_sum/self.ep_count
+                        self.max_rew_sum += self.max_rew
+                        self.best_ext_ret_all = self.max_rew_sum/self.ep_count
+
+                        summary.value.add(
+                                    tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped',
+                                    simple_value = self.single_eprew,
+                                )
+                        summary.value.add(
+                                    tag = 'hierarchy_0/final_reward_extrinsic_reward_unclipped_all',
+                                    simple_value = self.single_eprew_all,
+                                )
+                        summary.value.add(
+                                    tag = 'hierarchy_0/extrinsic_reward_unclipped_max',
+                                    simple_value = self.max_rew,
+                                )
+                        summary.value.add(
+                                    tag = 'hierarchy_0/extrinsic_reward_unclipped_max_all',
+                                    simple_value = self.best_ext_ret_all,
+                                )
+
+                        self.summary_writer.add_summary(summary, self.step_value)
+                        self.summary_writer.flush()
+
 
             self.statlists['eprew'].extend(all_ep_infos['r'])
             self.stats['eprew_recent'] = np.mean(all_ep_infos['r'])
