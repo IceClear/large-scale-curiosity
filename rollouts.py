@@ -52,6 +52,7 @@ class Rollout(object):
         self.step_count = 0
 
         self.ep_count = 0
+        self.step_value = 0
         self.single_rew_sum = 0
         self.max_rew_sum = 0
         self.single_eprew = None
@@ -78,6 +79,8 @@ class Rollout(object):
         s = t % self.nsteps_per_seg
         for l in range(self.nlumps):
             obs, prevrews, news, infos = self.env_get(l)
+            if len(self.ep_infos_new)>0:
+                self.step_value += self.ep_infos_new[0][0]
             if prevrews is not None:
                 self.cur_ep_rew += prevrews[0]
             if news[0] and prevrews is not None:
@@ -88,7 +91,7 @@ class Rollout(object):
                     self.max_rew = self.single_eprew
                 self.cur_ep_rew = 0
 
-            if self.step_count % self.hps['vis_curves_interval']==0 and self.single_eprew is not None:
+            if self.step_value > self.hps['vis_curves_interval']*self.ep_count and self.single_eprew is not None:
                 summary = tf.Summary()
                 self.ep_count +=1
                 self.single_rew_sum += self.single_eprew
@@ -113,7 +116,7 @@ class Rollout(object):
                             simple_value = self.best_ext_ret_all,
                         )
 
-                self.summary_writer.add_summary(summary, self.step_count)
+                self.summary_writer.add_summary(summary, self.step_value)
                 self.summary_writer.flush()
             # if t > 0:
             #     prev_feat = self.prev_feat[l]
