@@ -28,10 +28,12 @@ import subprocess
 
 def start_experiment(**args):
     make_env = partial(make_env_all_params, add_monitor=True, args=args)
+    summary_writer = tf.summary.FileWriter(args['save_dir'])
 
     trainer = Trainer(make_env=make_env,
                       num_timesteps=args['num_timesteps'], hps=args,
-                      envs_per_process=args['envs_per_process'])
+                      envs_per_process=args['envs_per_process'],
+                      summary_writer = summary_writer)
     log, tf_sess = get_experiment_environment(**args)
     with log, tf_sess:
         logdir = args['save_dir']
@@ -44,7 +46,7 @@ def start_experiment(**args):
 
 
 class Trainer(object):
-    def __init__(self, make_env, hps, num_timesteps, envs_per_process):
+    def __init__(self, make_env, hps, num_timesteps, envs_per_process, summary_writer):
         self.make_env = make_env
         self.hps = hps
         self.envs_per_process = envs_per_process
@@ -97,7 +99,8 @@ class Trainer(object):
             ext_coeff=hps['ext_coeff'],
             int_coeff=hps['int_coeff'],
             dynamics=self.dynamics,
-            hps = hps
+            hps = hps,
+            summary_writer = summary_writer
         )
 
         self.agent.to_report['aux'] = tf.reduce_mean(self.feature_extractor.loss)
@@ -226,7 +229,7 @@ if __name__ == '__main__':
     parser.add_argument('--layernorm', type=int, default=0)
     parser.add_argument('--feat_learning', type=str, default="none",
                         choices=["none", "idf", "vaesph", "vaenonsph", "pix2pix"])
-    parser.add_argument('--vis_curves_interval', type=int, default=4096)
+    parser.add_argument('--vis_curves_interval', type=int, default=256)
 
     parser.add_argument('--clear-run', action='store_true', default=False,
                         help='if clear the save folder')
