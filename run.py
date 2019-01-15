@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 try:
     from OpenGL import GLU
 except:
@@ -12,17 +11,17 @@ import gym
 import tensorflow as tf
 from baselines import logger
 from baselines.bench import Monitor
-from baselines.common.atari_wrappers import NoopResetEnv, FrameStack
+from baselines.common.atari_wrappers import NoopResetEnv, FrameStack, make_atari, wrap_deepmind, EpisodicLifeEnv, ClipRewardEnv, FireResetEnv
 from mpi4py import MPI
+from utils import random_agent_ob_mean_std, load_state, save_state
 
 from auxiliary_tasks import FeatureExtractor, InverseDynamics, VAE, JustPixels
 from cnn_policy import CnnPolicy
 from cppo_agent import PpoOptimizer
 from dynamics import Dynamics, UNet
-from utils import random_agent_ob_mean_std, load_state, save_state
+from utils import random_agent_ob_mean_std
 from wrappers import MontezumaInfoWrapper, make_mario_env, make_robo_pong, make_robo_hockey, \
-    make_multi_pong, AddRandomStateToInfo, MaxAndSkipEnv, ProcessFrame84, ExtraTimeLimit
-
+    make_multi_pong, AddRandomStateToInfo, MaxAndSkipEnv, ProcessFrame84, ExtraTimeLimit, CropFrame
 import subprocess
 
 
@@ -131,7 +130,7 @@ class Trainer(object):
                 save_state(fname)
             if self.agent.rollout.stats['tcount'] > self.num_timesteps:
                 break
-            print(self.agent.rollout.stats['tcount'])
+            # print(self.agent.rollout.stats['tcount'])
             if (self.agent.rollout.stats['tcount'] % args.vis_curves_interval == 0):
                 self.summary = tf.Summary()
                 if not info['update']['recent_best_ext_ret'] is None:
@@ -169,12 +168,23 @@ class Trainer(object):
 def make_env_all_params(rank, add_monitor, args):
     if args["env_kind"] == 'atari':
         env = gym.make(args['env'])
+        if args['mega_wrapper']:
+            env = EpisodicLifeEnv(env)
+            env = ClipRewardEnv(env)
+            if 'FIRE' in env.unwrapped.get_action_meanings():
+                env = FireResetEnv(env)
+            # env = make_atari(args['env'])
+            # if len(env.observation_space.shape) == 3:
+            #     env = wrap_deepmind(env)
+            #     if args['crop_obs'] is not None:
+            #         env = CropFrame(env,args['crop_obs'])
         assert 'NoFrameskip' in env.spec.id
         env = NoopResetEnv(env, noop_max=args['noop_max'])
         env = MaxAndSkipEnv(env, skip=4)
         env = ProcessFrame84(env, crop=False)
         env = FrameStack(env, 4)
         env = ExtraTimeLimit(env, args['max_episode_steps'])
+
         if 'Montezuma' in args['env']:
             env = MontezumaInfoWrapper(env)
         env = AddRandomStateToInfo(env)
@@ -189,8 +199,8 @@ def make_env_all_params(rank, add_monitor, args):
             env = make_robo_hockey()
 
     if add_monitor:
-        if not os.path.exists(args['save_dir']+'csv_file/'):
-            os.makedirs(args['save_dir']+'csv_file/')
+        if not os.path.exists(args['save_dir']+'/csv_file/'):
+            os.makedirs(args['save_dir']+'/csv_file/')
         env = Monitor(env, osp.join(args['save_dir'], 'csv_file/%.2i' % rank))
     return env
 
@@ -228,13 +238,13 @@ def add_optimization_params(parser):
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--ent_coeff', type=float, default=0.001)
     parser.add_argument('--nepochs', type=int, default=3)
-    parser.add_argument('--num_timesteps', type=int, default=int(1e8))
+    parser.add_argument('--num_timesteps', type=int, default=int(1e7))
 
 
 def add_rollout_params(parser):
     parser.add_argument('--nsteps_per_seg', type=int, default=128)
     parser.add_argument('--nsegs_per_env', type=int, default=1)
-    parser.add_argument('--envs_per_process', type=int, default=32)
+    parser.add_argument('--envs_per_process', type=int, default=8)
     parser.add_argument('--nlumps', type=int, default=1)
 
 
@@ -255,14 +265,18 @@ if __name__ == '__main__':
     parser.add_argument('--layernorm', type=int, default=0)
     parser.add_argument('--feat_learning', type=str, default="none",
                         choices=["none", "idf", "vaesph", "vaenonsph", "pix2pix"])
-    parser.add_argument('--vis_curves_interval', type=int, default=4096)
 
+    parser.add_argument('--vis_curves_interval', type=int, default=1)
     parser.add_argument('--clear-run', action='store_true', default=False,
                         help='if clear the save folder')
+    parser.add_argument('--mega-wrapper', type=int, default=0,
+                        help='if use the same wrapper as mega')
 
     args = parser.parse_args()
     args.save_dir = '../results/'
     args.save_dir = os.path.join(args.save_dir, 'e_n-{}/'.format(args.env))
+    args.save_dir = os.path.join(args.save_dir, 'rew_norm-{}'.format(str(args.norm_rew)))
+    args.save_dir = os.path.join(args.save_dir, 'mega_wrapper-{}'.format(str(args.mega_wrapper)))
     if args.clear_run:
         '''if clear_run, clear the path before create the path'''
         input('You have set clear_run, is that what you want?')

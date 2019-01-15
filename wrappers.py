@@ -17,6 +17,19 @@ def unwrap(env):
     else:
         return env
 
+class CropFrame(gym.ObservationWrapper):
+    def __init__(self, env, crop_obs):
+        """Warp frames to 84x84 as done in the Nature paper and later work."""
+        gym.ObservationWrapper.__init__(self, env)
+        self.crop_obs = crop_obs
+
+    def observation(self, frame):
+        frame[:self.crop_obs['h'][0] ,:                      ].fill(128)
+        frame[:                      ,:self.crop_obs['w'][0] ].fill(128)
+        frame[ self.crop_obs['h'][1]:,:                      ].fill(128)
+        frame[:                      , self.crop_obs['w'][1]:].fill(128)
+        return frame
+
 
 class MaxAndSkipEnv(gym.Wrapper):
     def __init__(self, env, skip=4):
