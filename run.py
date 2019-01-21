@@ -118,16 +118,16 @@ class Trainer(object):
             if info['update']:
                 logger.logkvs(info['update'])
                 logger.dumpkvs()
-            if self.agent.rollout.stats['tcount'] == 0:
-                fname = os.path.join(self.hps['save_dir'], 'checkpoints')
-                if os.path.exists(fname+'.index'):
-                    load_state(fname)
-                    print('load successfully')
-                else:
-                    print('fail to load')
-            if self.agent.rollout.stats['tcount']%int(self.num_timesteps/self.num_timesteps)==0:
-                fname = os.path.join(self.hps['save_dir'], 'checkpoints')
-                save_state(fname)
+            # if self.agent.rollout.stats['tcount'] == 0:
+            #     fname = os.path.join(self.hps['save_dir'], 'checkpoints')
+            #     if os.path.exists(fname+'.index'):
+            #         load_state(fname)
+            #         print('load successfully')
+            #     else:
+            #         print('fail to load')
+            # if self.agent.rollout.stats['tcount']%int(self.num_timesteps/self.num_timesteps)==0:
+            #     fname = os.path.join(self.hps['save_dir'], 'checkpoints')
+            #     save_state(fname)
             if self.agent.rollout.stats['tcount'] > self.num_timesteps:
                 break
             # print(self.agent.rollout.stats['tcount'])
@@ -212,7 +212,7 @@ def get_experiment_environment(**args):
     process_seed = args["seed"] + 1000 * MPI.COMM_WORLD.Get_rank()
     process_seed = hash_seed(process_seed, max_bytes=4)
     set_global_seeds(process_seed)
-    setup_mpi_gpus()
+   # setup_mpi_gpus()
 
     logger_context = logger.scoped_configure(dir=args['save_dir'],
                                              format_strs=['stdout', 'log',
