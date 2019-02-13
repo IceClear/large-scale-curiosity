@@ -168,23 +168,12 @@ class Trainer(object):
 def make_env_all_params(rank, add_monitor, args):
     if args["env_kind"] == 'atari':
         env = gym.make(args['env'])
-        if args['mega_wrapper']:
-            env = EpisodicLifeEnv(env)
-            env = ClipRewardEnv(env)
-            if 'FIRE' in env.unwrapped.get_action_meanings():
-                env = FireResetEnv(env)
-            # env = make_atari(args['env'])
-            # if len(env.observation_space.shape) == 3:
-            #     env = wrap_deepmind(env)
-            #     if args['crop_obs'] is not None:
-            #         env = CropFrame(env,args['crop_obs'])
         assert 'NoFrameskip' in env.spec.id
         env = NoopResetEnv(env, noop_max=args['noop_max'])
         env = MaxAndSkipEnv(env, skip=4)
         env = ProcessFrame84(env, crop=False)
         env = FrameStack(env, 4)
         env = ExtraTimeLimit(env, args['max_episode_steps'])
-
         if 'Montezuma' in args['env']:
             env = MontezumaInfoWrapper(env)
         env = AddRandomStateToInfo(env)
@@ -244,7 +233,7 @@ def add_optimization_params(parser):
 def add_rollout_params(parser):
     parser.add_argument('--nsteps_per_seg', type=int, default=128)
     parser.add_argument('--nsegs_per_env', type=int, default=1)
-    parser.add_argument('--envs_per_process', type=int, default=8)
+    parser.add_argument('--envs_per_process', type=int, default=64)
     parser.add_argument('--nlumps', type=int, default=1)
 
 
@@ -277,6 +266,7 @@ if __name__ == '__main__':
     args.save_dir = os.path.join(args.save_dir, 'e_n-{}/'.format(args.env))
     args.save_dir = os.path.join(args.save_dir, 'rew_norm-{}'.format(str(args.norm_rew)))
     args.save_dir = os.path.join(args.save_dir, 'mega_wrapper-{}'.format(str(args.mega_wrapper)))
+    args.save_dir = os.path.join(args.save_dir, 'num_env-{}'.format(str(args.envs_per_process)))
     if args.clear_run:
         '''if clear_run, clear the path before create the path'''
         input('You have set clear_run, is that what you want?')

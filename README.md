@@ -29,9 +29,12 @@ This is a TensorFlow based implementation for our [paper on large-scale study of
 ### Installation and Usage
 The following command should train a pure exploration agent on Breakout with default experiment parameters.
 ```bash
-python run.py
+python run.py --mega-wrapper 0 --env BattleZoneNoFrameskip-v4 --norm_rew 1 --clear-run
 ```
-To use more than one gpu/machine, use MPI (e.g. `mpiexec -n 8 python run.py` should use 1024 parallel environments to collect experience instead of the default 128 on an 8 gpu machine). 
+```bash
+tensorboard --logdir ../results/e_n-PongNoFrameskip-v4 --port 8888
+```
+To use more than one gpu/machine, use MPI (e.g. `mpiexec -n 8 python run.py` should use 1024 parallel environments to collect experience instead of the default 128 on an 8 gpu machine).
 
 ### Other helpful pointers
 - [Paper](https://pathak22.github.io/large-scale-curiosity/resources/largeScaleCuriosity2018.pdf)
